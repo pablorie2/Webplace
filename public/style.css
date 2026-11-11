@@ -4,3 +4,14 @@
 
 /* realism and custom poker raise control */
 #raceCanvas{border:1px solid #8196a3;border-radius:14px;box-shadow:0 18px 48px #0008, inset 0 0 25px #fff2;background:#9db8b8}.active-seat{border-color:#d6e45c;box-shadow:0 0 0 2px #d6e45c55,0 5px 18px #0007}.raise-panel{margin:18px 0;padding:17px 18px;background:linear-gradient(145deg,#17243a,#0d1728);border:1px solid #40506a;border-radius:13px}.raise-heading,.raise-limits{display:flex;justify-content:space-between;align-items:center}.raise-heading label{font:11px 'DM Mono',monospace;letter-spacing:1.5px;color:var(--muted)}.raise-heading strong{color:var(--lime);font:600 17px 'DM Mono',monospace}.raise-panel input[type=range]{width:100%;accent-color:var(--lime);margin:18px 0 8px}.raise-limits{font:10px 'DM Mono',monospace;color:var(--muted)}.raise-panel button{width:100%;margin-top:16px}.game-actions button:disabled,.raise-panel button:disabled{opacity:.4;cursor:not-allowed}
+
+/* Webplace 3D Grand Prix */
+.race-stage{position:relative;width:100%;overflow:hidden;border-radius:16px;border:1px solid #526d7d;background:#15212a;box-shadow:0 24px 65px #0009}
+#raceCanvas{display:block;width:100%;height:clamp(330px,58vw,650px);border:0;border-radius:0;touch-action:none;background:linear-gradient(#8eb6d1,#c4d4d4)}
+.race-overlay{position:absolute;inset:0;pointer-events:none;padding:18px;display:flex;align-items:flex-start;justify-content:space-between;background:linear-gradient(180deg,#06101a8c,transparent 27%,transparent 72%,#06101a55)}
+.race-speed{display:flex;align-items:baseline;gap:7px;color:#fff;text-shadow:0 2px 8px #000;font-family:'DM Mono',monospace}
+.race-speed strong{font-size:clamp(30px,5vw,52px);font-weight:500;letter-spacing:-3px}.race-speed span,.race-lap,.race-camera{font:11px 'DM Mono',monospace;letter-spacing:1.4px;color:#f4f6f7;text-shadow:0 2px 8px #000}
+.race-lap{background:#07131dcc;border:1px solid #ffffff55;border-radius:8px;padding:10px 14px}
+.race-camera{position:absolute;right:18px;bottom:15px;color:#dce9ed;font-size:9px}
+.race-track-name{color:#e6f3f4!important}
+@media(max-width:600px){#raceCanvas{height:410px}.race-overlay{padding:12px}.race-camera{font-size:8px}.race-lap{font-size:9px;padding:8px}}
