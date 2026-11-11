@@ -1,85 +1,44 @@
-const express=require('express');
-const http=require('http');
-const {Server}=require('socket.io');
-const {Chess}=require('chess.js');
-const path=require('path');
-const app=express(),server=http.createServer(app),io=new Server(server);
-app.use(express.static(path.join(__dirname,'public')));
-app.get('/health',(req,res)=>res.json({ok:true,name:'Webplace'}));
-const rooms=new Map();
-const tracks=Array.from({length:15},(_,i)=>({id:i+1,name:['Coastal Sprint','Desert Loop','Alpine Pass','Forest Run','Neon Circuit'][i%5]}));
-const botNames=['Nova','Pixel','Blitz','Comet','Rook','Turbo','Echo','Viper'];
-function freshRoom(id,game,config={}) {
- const aiCount=game==='chess'?1:Math.max(1,Math.min(8,Number(config.aiCount)||1));
- const difficulty=['easy','medium','hard'].includes(config.difficulty)?config.difficulty:'medium';
- const bots=Array.from({length:aiCount},(_,i)=>({id:'bot-'+i,name:botNames[i],isAI:true}));
- return {id,game,players:[],bots,difficulty,aiCount,created:Date.now(),state:game==='chess'?{fen:new Chess().fen(),turn:'w',moves:[],status:'Playing'}:game==='poker'?{pot:0,round:'Waiting',lastAction:'Your turn — make a move'}:{track:1,racers:{},started:true}};
-}
-function pub(r){return {id:r.id,game:r.game,difficulty:r.difficulty,aiCount:r.aiCount,players:[...r.players.map(p=>({id:p.id,name:p.name,isAI:false})),...r.bots],state:r.state,tracks:r.game==='race'?tracks:undefined};}
-function send(r){io.to(r.id).emit('room:update',pub(r));}
-function chessBotMove(r){
- if(r.game!=='chess')return;
- const chess=new Chess(r.state.fen);if(chess.isGameOver()||chess.turn()!=='b')return;
- const moves=chess.moves({verbose:true});if(!moves.length)return;
- const value={p:1,n:3,b:3,r:5,q:9,k:20};
- let chosen=moves[Math.floor(Math.random()*moves.length)];
- if(r.difficulty!=='easy'){
-  const scored=moves.map(m=>({m,score:(m.captured?value[m.captured]:0)+(m.promotion?8:0)+(m.san.includes('+')?1:0)+(m.san.includes('#')?100:0)+(Math.random()*(r.difficulty==='hard'?.25:2))}));
-  scored.sort((a,b)=>b.score-a.score);chosen=scored[0].m;
- }
- chess.move(chosen);
- r.state={fen:chess.fen(),turn:chess.turn(),moves:[...r.state.moves,chosen.san].slice(-16),status:chess.isCheckmate()?'Checkmate — AI wins':chess.isDraw()?'Draw':chess.isCheck()?'Check':'Playing'};
- send(r);
-}
-function pokerBotTurn(r){
- const active=r.bots[Math.floor(Math.random()*r.bots.length)];if(!active)return;
- const actions=r.difficulty==='easy'?['check','call','fold']:r.difficulty==='medium'?['check','call','bet']:['call','raise','bet'];
- const action=actions[Math.floor(Math.random()*actions.length)],amount=['bet','raise'].includes(action)?(r.difficulty==='hard'?30:10):0;
- r.state.pot+=amount;r.state.lastAction=active.name+' (AI) '+action+(amount?' '+amount:'');send(r);
-}
-function tickRace(r){
- if(r.game!=='race')return;
- const speed={easy:.012,medium:.019,hard:.027}[r.difficulty]||.019;
- for(let i=0;i<r.bots.length;i++){
-  const id=r.bots[i].id,pos=r.state.racers[id]||{x:0,y:0,progress:0};
-  pos.progress=(pos.progress||0)+speed*(.7+Math.random()*.6);
-  pos.x=Math.sin(pos.progress*2)*.65;pos.y=Math.cos(pos.progress*1.3)*.5;r.state.racers[id]=pos;
- }
- send(r);
-}
-io.on('connection',socket=>{
- socket.on('room:create',({game,name,aiCount,difficulty},cb=()=>{})=>{
-  if(!['poker','chess','race'].includes(game))return cb({ok:false,error:'Unknown game'});
-  const id=Math.random().toString(36).slice(2,8).toUpperCase(),r=freshRoom(id,game,{aiCount,difficulty});
-  rooms.set(id,r);join(r,socket,name);cb({ok:true,id,room:pub(r)});
-  if(game==='race'){r.bots.forEach((b,i)=>r.state.racers[b.id]={x:0,y:0,progress:i*.3});}
-  send(r);
- });
- socket.on('room:join',({id,name},cb=()=>{})=>{
-  const r=rooms.get(String(id||'').toUpperCase());if(!r)return cb({ok:false,error:'Room not found'});
-  if(r.players.length>=8)return cb({ok:false,error:'Room is full'});
-  join(r,socket,name);cb({ok:true,room:pub(r)});
- });
- function join(r,s,n){if(r.players.some(p=>p.id===s.id))return;s.join(r.id);r.players.push({id:s.id,name:String(n||'Guest').slice(0,18)});if(r.game==='race')r.state.racers[s.id]={x:0,y:0,progress:0};send(r);}
- function leave(s){for(const r of rooms.values()){const n=r.players.length;r.players=r.players.filter(p=>p.id!==s.id);if(n!==r.players.length){delete r.state.racers[s.id];send(r);if(!r.players.length)rooms.delete(r.id);}}}
- socket.on('chess:move',({id,from,to,promotion})=>{
-  const r=rooms.get(id);if(!r||r.game!=='chess'||!r.players.some(p=>p.id===socket.id))return;
-  try{const chess=new Chess(r.state.fen);if(chess.turn()!=='w')return;const move=chess.move({from,to,promotion:promotion||'q'});if(!move)return;
-   r.state={fen:chess.fen(),turn:chess.turn(),moves:[...r.state.moves,move.san].slice(-16),status:chess.isCheckmate()?'You win':chess.isDraw()?'Draw':chess.isCheck()?'Check':'AI thinking…'};send(r);
-   if(!chess.isGameOver())setTimeout(()=>{if(rooms.has(id))chessBotMove(r);},r.difficulty==='hard'?850:500);
-  }catch{}
- });
- socket.on('poker:action',({id,action,amount})=>{
-  const r=rooms.get(id);if(!r||r.game!=='poker'||!r.players.some(p=>p.id===socket.id))return;
-  const n=Math.max(0,Math.min(1000,Number(amount)||0));r.state.lastAction='You '+String(action).slice(0,12)+(n?' '+n:'');if(action==='bet'||action==='raise')r.state.pot+=n;send(r);
-  setTimeout(()=>{if(rooms.has(id))pokerBotTurn(r);},700);
- });
- socket.on('race:move',({id,x,y})=>{
-  const r=rooms.get(id);if(!r||r.game!=='race'||!r.state.racers[socket.id])return;
-  const pos=r.state.racers[socket.id];pos.x=Math.max(-1,Math.min(1,Number(x)||0));pos.y=Math.max(-1,Math.min(1,Number(y)||0));pos.progress=(pos.progress||0)+.04;send(r);
- });
- socket.on('race:track',({id,track})=>{const r=rooms.get(id);if(r&&r.game==='race'&&r.players[0]?.id===socket.id){r.state.track=Math.max(1,Math.min(15,Number(track)||1));send(r);}});
- socket.on('disconnect',()=>leave(socket));
+const express=require('express'),http=require('http'),{Server}=require('socket.io'),{Chess}=require('chess.js'),path=require('path');
+const app=express(),server=http.createServer(app),io=new Server(server);app.use(express.static(path.join(__dirname,'public')));app.get('/health',(q,s)=>s.json({ok:true}));
+const rooms=new Map(),names=['Nova','Pixel','Blitz','Comet','Rook','Turbo','Echo','Viper'];
+const tracks=['Coastal Sprint','Desert Loop','Alpine Pass','Forest Run','Neon Circuit'];
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+function create(id,game,c){const count=c.aiEnabled?clamp(+c.aiCount||1,1,8):0;return{id,game,players:[],bots:Array.from({length:count},(_,i)=>({id:'bot'+i,name:names[i],isAI:true})),difficulty:c.difficulty||'medium',colorSwap:false,round:1,over:false,
+ chess:{fen:new Chess().fen(),moves:[],status:'White to move'},
+ poker:{pot:0,street:'Pre-flop',deck:[],hands:{},community:[],chips:{},folded:[],turn:0,currentBet:20,lastBet:0,actions:[],result:''},
+ race:{track:0, racers:{},started:true,finished:[]}}}
+function pub(r){return{id:r.id,game:r.game,players:r.players.map((p,i)=>({...p,seat:i,color:r.game==='chess'?((i===0)!==r.colorSwap?'w':'b'):undefined})).concat(r.bots),difficulty:r.difficulty,round:r.round,over:r.over,colorSwap:r.colorSwap,state:r[r.game],tracks:r.game==='race'?tracks:undefined,host:r.players[0]?.id};}
+function send(r){io.to(r.id).emit('room:update',pub(r))}
+function join(r,s,name){if(r.players.some(p=>p.id===s.id))return;s.join(r.id);r.players.push({id:s.id,name:String(name||'Guest').slice(0,18),isAI:false});if(r.game==='race')r.race.racers[s.id]={x:0,y:0,angle:0,speed:0};if(r.game==='poker')startHand(r);send(r)}
+function chessTurn(r){const c=new Chess(r.chess.fen);if(c.isGameOver()){r.over=true;r.chess.status=c.isCheckmate()?'Checkmate':c.isDraw()?'Draw':'Game over';send(r);return}
+ const color=c.turn(),seat=r.players.findIndex((p,i)=>((i===0)!==r.colorSwap?'w':'b')===color);
+ if(seat<0||seat>=r.players.length){r.chess.status='Waiting for '+(color==='w'?'White':'Black')+' to join';return}
+ const player=r.players[seat];if(!player)return;
+ if(player.isAI||(!r.players[seat]&&r.bots.length)){setTimeout(()=>chessAI(r),500);}}
+function chessAI(r){if(r.game!=='chess'||r.over)return;const c=new Chess(r.chess.fen);const moves=c.moves({verbose:true});if(!moves.length)return;const val={p:1,n:3,b:3,r:5,q:9};let m=moves[Math.floor(Math.random()*moves.length)];if(r.difficulty!=='easy'){moves.sort((a,b)=>((b.captured?val[b.captured]:0)+(b.san.includes('+')?1:0)+Math.random()*(r.difficulty==='hard'?.4:2))-((a.captured?val[a.captured]:0)+(a.san.includes('+')?1:0)));m=moves[0]}c.move(m);r.chess={fen:c.fen(),moves:[...r.chess.moves,m.san],status:c.isGameOver()?(c.isCheckmate()?'Checkmate — AI wins':'Draw'):c.isCheck()?'Check':'Playing'};r.over=c.isGameOver();send(r)}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function startHand(r){const p=r.poker,players=[...r.players,...r.bots];if(players.length<2){p.result='Waiting for another player';return}p.deck=shuffle(['♠','♥','♦','♣'].flatMap(s=>Array.from({length:13},(_,i)=>({r:i+2,s}))));
+ p.pot=0;p.street='Pre-flop';p.community=[];p.hands={};p.folded=[];p.actions=[];p.currentBet=20;p.turn=0;p.lastBet=0;p.result='';players.forEach(x=>{p.chips[x.id]=p.chips[x.id]??1000;p.hands[x.id]=[p.deck.pop(),p.deck.pop()]});p.pot=players.length*10;players.forEach(x=>p.chips[x.id]-=10);send(r);if(r.bots.length&&r.players.length)pokerBot(r)}
+function card(c){return c?({11:'J',12:'Q',13:'K',14:'A'}[c.r]||c.r)+c.s:'??'}
+function pokerAction(r,id,action,amount=0){const p=r.poker,players=[...r.players,...r.bots],who=players[p.turn%players.length];if(!who||who.id!==id||r.over)return;let n=0;
+ if(action==='fold')p.folded.push(id);else if(action==='call'){n=Math.min(p.chips[id],Math.max(0,p.currentBet-(p.lastBet||0)));}else if(action==='bet'||action==='raise'){n=clamp(+amount||20,20,200);n=Math.min(n,p.chips[id]);p.currentBet=n+(p.lastBet||0)}
+ if(n){p.chips[id]-=n;p.pot+=n;p.lastBet=(p.lastBet||0)+n}
+ p.actions.push({name:who.name,action,amount:n});p.turn++;
+ const live=players.filter(x=>!p.folded.includes(x.id));if(live.length<=1){p.result=live[0].name+' wins '+p.pot+' chips';p.chips[live[0].id]+=p.pot;r.over=true}else if(p.turn>=players.length){if(p.street==='Pre-flop'){p.community.push(...p.deck.splice(0,3));p.street='Flop'}else if(p.street==='Flop'){p.community.push(p.deck.pop());p.street='Turn'}else if(p.street==='Turn'){p.community.push(p.deck.pop());p.street='River'}else{const winner=live[Math.floor(Math.random()*live.length)];p.result=winner.name+' wins '+p.pot+' chips (showdown)';p.chips[winner.id]+=p.pot;r.over=true}p.turn=0;p.lastBet=0;p.currentBet=0;}
+ send(r);if(!r.over&&r.bots.length)setTimeout(()=>pokerBot(r),700)}
+function pokerBot(r){if(r.over||r.game!=='poker')return;const players=[...r.players,...r.bots],who=players[r.poker.turn%players.length];if(!who?.isAI)return;const d=r.difficulty,acts=d==='easy'?['call','check','fold']:d==='medium'?['call','call','raise','fold']:['call','raise','raise','fold'];pokerAction(r,who.id,acts[Math.floor(Math.random()*acts.length)],d==='hard'?80:30)}
+function resetRace(r){r.race={track:0,racers:{},started:true,finished:[]};[...r.players,...r.bots].forEach(p=>r.race.racers[p.id]={x:0,y:0,angle:0,speed:0})}
+io.on('connection',s=>{
+ s.on('room:create',(d,cb=()=>{})=>{if(!['chess','poker','race'].includes(d.game))return cb({ok:false,error:'Unknown game'});const id=Math.random().toString(36).slice(2,8).toUpperCase(),r=create(id,d.game,d);rooms.set(id,r);join(r,s,d.name);cb({ok:true,room:pub(r)})});
+ s.on('room:join',(d,cb=()=>{})=>{const r=rooms.get(String(d.id||'').toUpperCase());if(!r)return cb({ok:false,error:'Room not found'});if(r.players.length>=8)return cb({ok:false,error:'Room is full'});if(r.game==='chess'&&r.players.length>=2)return cb({ok:false,error:'Chess is one-versus-one; this room is full'});join(r,s,d.name);cb({ok:true,room:pub(r)})});
+ s.on('chess:move',d=>{const r=rooms.get(d.id);if(!r||r.game!=='chess'||r.over)return;const seat=r.players.findIndex(p=>p.id===s.id);if(seat<0)return;const color=(seat===0)!==r.colorSwap?'w':'b';const c=new Chess(r.chess.fen);if(c.turn()!==color)return;try{const m=c.move({from:d.from,to:d.to,promotion:d.promotion||'q'});if(!m)return;r.chess={fen:c.fen(),moves:[...r.chess.moves,m.san],status:c.isGameOver()?(c.isCheckmate()?'Checkmate — '+(color==='w'?'White':'Black')+' wins':'Draw'):c.isCheck()?'Check':'Playing'};r.over=c.isGameOver();send(r)}catch{}});
+ s.on('chess:rematch',d=>{const r=rooms.get(d.id);if(!r||r.game!=='chess'||!r.over||!r.players.some(p=>p.id===s.id))return;r.colorSwap=!r.colorSwap;r.round++;r.over=false;r.chess={fen:new Chess().fen(),moves:[],status:'New round — White to move'};send(r)});
+ s.on('poker:action',d=>{const r=rooms.get(d.id);if(!r||r.game!=='poker'||!r.players.some(p=>p.id===s.id))return;pokerAction(r,s.id,d.action,d.amount)});
+ s.on('poker:next',d=>{const r=rooms.get(d.id);if(!r||r.game!=='poker'||!r.over||!r.players.some(p=>p.id===s.id))return;r.over=false;r.round++;startHand(r)});
+ s.on('race:input',d=>{const r=rooms.get(d.id),p=r?.race.racers[s.id];if(!r||r.game!=='race'||!p)return;p.speed=clamp(+d.throttle||0,0,1);p.angle=clamp(p.angle+(+d.steer||0)*.07,-1.5,1.5);p.x=clamp(p.x+Math.sin(p.angle)*p.speed*.025,-1,1);p.y=clamp(p.y+Math.cos(p.angle)*p.speed*.025,0,1);send(r)});
+ s.on('race:track',d=>{const r=rooms.get(d.id);if(r?.game==='race'&&r.players[0]?.id===s.id){r.race.track=clamp(+d.track||0,0,tracks.length-1);send(r)}});
+ s.on('race:next',d=>{const r=rooms.get(d.id);if(r?.game==='race'&&r.players.some(p=>p.id===s.id)){r.round++;resetRace(r);send(r)}});
+ s.on('disconnect',()=>{for(const r of rooms.values()){r.players=r.players.filter(p=>p.id!==s.id);if(r.game==='race')delete r.race.racers[s.id];if(!r.players.length)rooms.delete(r.id);else send(r)}});
 });
-setInterval(()=>{for(const r of rooms.values())if(r.game==='race')tickRace(r);},900);
-const port=process.env.PORT||3000;server.listen(port,'0.0.0.0',()=>console.log('Webplace listening on '+port));
+setInterval(()=>{for(const r of rooms.values())if(r.game==='race'){for(const b of r.bots){const p=r.race.racers[b.id];if(p){p.speed=.45+Math.random()*.35;p.angle+=(Math.random()-.5)*.03;p.x=clamp(p.x+Math.sin(p.angle)*p.speed*.015,-1,1);p.y=clamp(p.y+p.speed*.012,0,1)}}send(r)}},100);
+const port=process.env.PORT||3000;server.listen(port,'0.0.0.0',()=>console.log('Webplace on '+port));
