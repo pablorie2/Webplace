@@ -9,7 +9,7 @@ function create(id,game,c){const count=c.aiEnabled?clamp(+c.aiCount||1,1,8):0;re
  race:{track:0, racers:{},started:true,finished:[]}}}
 function pub(r){return{id:r.id,game:r.game,players:r.players.map((p,i)=>({...p,seat:i,color:r.game==='chess'?((i===0)!==r.colorSwap?'w':'b'):undefined})).concat(r.bots),difficulty:r.difficulty,round:r.round,over:r.over,colorSwap:r.colorSwap,state:r[r.game],tracks:r.game==='race'?tracks:undefined,host:r.players[0]?.id};}
 function send(r){io.to(r.id).emit('room:update',pub(r))}
-function join(r,s,name){if(r.players.some(p=>p.id===s.id))return;s.join(r.id);r.players.push({id:s.id,name:String(name||'Guest').slice(0,18),isAI:false});if(r.game==='race')r.race.racers[s.id]={x:0,y:0,angle:0,speed:0};if(r.game==='poker')startHand(r);send(r)}
+function join(r,s,name){if(r.players.some(p=>p.id===s.id))return;s.join(r.id);r.players.push({id:s.id,name:String(name||'Guest').slice(0,18),isAI:false});if(r.game==='race'){r.race.racers[s.id]={x:0,y:0,angle:0,speed:0,lap:0};r.bots.forEach(b=>r.race.racers[b.id] ||= {x:0,y:0,angle:0,speed:0,lap:0})}if(r.game==='poker')startHand(r);send(r)}
 function chessTurn(r){const c=new Chess(r.chess.fen);if(c.isGameOver()){r.over=true;r.chess.status=c.isCheckmate()?'Checkmate':c.isDraw()?'Draw':'Game over';send(r);return}
  const color=c.turn(),seat=r.players.findIndex((p,i)=>((i===0)!==r.colorSwap?'w':'b')===color);
  if(seat<0||seat>=r.players.length){r.chess.status='Waiting for '+(color==='w'?'White':'Black')+' to join';return}
@@ -43,5 +43,5 @@ io.on('connection',s=>{
  s.on('race:next',d=>{const r=rooms.get(d.id);if(r?.game==='race'&&r.over&&r.players.some(p=>p.id===s.id)){r.round++;resetRace(r);send(r)}});
  s.on('disconnect',()=>{for(const r of rooms.values()){r.players=r.players.filter(p=>p.id!==s.id);if(r.game==='race')delete r.race.racers[s.id];if(!r.players.length)rooms.delete(r.id);else send(r)}});
 });
-setInterval(()=>{for(const r of rooms.values())if(r.game==='race'&&!r.over){for(const b of r.bots){const p=r.race.racers[b.id];if(p){p.speed=.45+Math.random()*.35;p.angle+=(Math.random()-.5)*.03;p.x=clamp(p.x+Math.sin(p.angle)*p.speed*.015,-1,1);const prev=p.y||0;p.y=(prev+p.speed*.012)%1;if(p.y<prev){p.lap=(p.lap||0)+1;if(p.lap>=3){r.over=true;r.race.finished.push(b.id)}}}}send(r)}},100);
+setInterval(()=>{for(const r of rooms.values())if(r.game==='race'&&!r.over){for(const b of r.bots){const p=r.race.racers[b.id];if(p){p.speed=({easy:.55,medium:.82,hard:1}[r.difficulty]||.82);p.angle+=(Math.random()-.5)*.018;p.x=clamp(p.x+Math.sin(p.angle)*p.speed*.015,-1,1);const prev=p.y||0;p.y=(prev+p.speed*.023)%1;if(p.y<prev){p.lap=(p.lap||0)+1;if(p.lap>=3){r.over=true;r.race.finished.push(b.id)}}}}send(r)}},100);
 const port=process.env.PORT||3000;server.listen(port,'0.0.0.0',()=>console.log('Webplace on '+port));
