@@ -1,17 +1,17 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1020"><title>Webplace — Play together</title><link rel="stylesheet" href="/style.css"></head><body class="calc-locked">
-<div id="calculator-screen" class="calculator-screen" aria-label="Calculator">
-  <div class="calculator-shell">
-    <div class="calculator-brand">CALCULATOR</div>
-    <div id="calc-display" class="calc-display" aria-live="polite">0</div>
-    <div class="calc-keys">
-      <button type="button" data-calc="clear" class="calc-function">AC</button>
-      <button type="button" data-calc="sign" class="calc-function">+/−</button>
-      <button type="button" data-calc="percent" class="calc-function">%</button>
-      <button type="button" data-calc="operator" data-value="÷" class="calc-operator">÷</button>
-      <button type="button" data-calc="digit" data-value="7">7</button><button type="button" data-calc="digit" data-value="8">8</button><button type="button" data-calc="digit" data-value="9">9</button><button type="button" data-calc="operator" data-value="×" class="calc-operator">×</button>
-      <button type="button" data-calc="digit" data-value="4">4</button><button type="button" data-calc="digit" data-value="5">5</button><button type="button" data-calc="digit" data-value="6">6</button><button type="button" data-calc="operator" data-value="−" class="calc-operator">−</button>
-      <button type="button" data-calc="digit" data-value="1">1</button><button type="button" data-calc="digit" data-value="2">2</button><button type="button" data-calc="digit" data-value="3">3</button><button type="button" data-calc="operator" data-value="+" class="calc-operator">+</button>
-      <button type="button" data-calc="digit" data-value="0" class="calc-zero">0</button><button type="button" data-calc="decimal">.</button><button type="button" data-calc="equals" class="calc-operator">=</button>
+<div id="calculator-screen" class="calculator-screen" aria-label="Scientific calculator">
+  <div class="calculator-shell scientific-shell">
+    <div class="calculator-brand">SCIENTIFIC CALCULATOR</div>
+    <div class="calc-mode"><span id="calc-angle">DEG</span><span>WEBPLACE</span></div>
+    <div id="calc-expression" class="calc-expression"></div><div id="calc-display" class="calc-display" aria-live="polite">0</div>
+    <div class="calc-keys scientific-keys">
+      <button data-calc="angle" class="calc-function">DEG</button><button data-calc="insert" data-value="(" class="calc-function">(</button><button data-calc="insert" data-value=")" class="calc-function">)</button><button data-calc="delete" class="calc-function">DEL</button><button data-calc="clear" class="calc-function">AC</button>
+      <button data-calc="function" data-value="sin" class="calc-function">sin</button><button data-calc="function" data-value="cos" class="calc-function">cos</button><button data-calc="function" data-value="tan" class="calc-function">tan</button><button data-calc="function" data-value="ln" class="calc-function">ln</button><button data-calc="function" data-value="log" class="calc-function">log</button>
+      <button data-calc="function" data-value="sqrt" class="calc-function">√</button><button data-calc="insert" data-value="^2" class="calc-function">x²</button><button data-calc="insert" data-value="^" class="calc-function">xʸ</button><button data-calc="insert" data-value="π" class="calc-function">π</button><button data-calc="insert" data-value="e" class="calc-function">e</button>
+      <button data-calc="insert" data-value="7">7</button><button data-calc="insert" data-value="8">8</button><button data-calc="insert" data-value="9">9</button><button data-calc="insert" data-value="!" class="calc-function">x!</button><button data-calc="insert" data-value="÷" class="calc-operator">÷</button>
+      <button data-calc="insert" data-value="4">4</button><button data-calc="insert" data-value="5">5</button><button data-calc="insert" data-value="6">6</button><button data-calc="insert" data-value="%" class="calc-function">%</button><button data-calc="insert" data-value="×" class="calc-operator">×</button>
+      <button data-calc="insert" data-value="1">1</button><button data-calc="insert" data-value="2">2</button><button data-calc="insert" data-value="3">3</button><button data-calc="insert" data-value="−" class="calc-operator">−</button><button data-calc="insert" data-value="+" class="calc-operator">+</button>
+      <button data-calc="insert" data-value="0" class="calc-zero">0</button><button data-calc="insert" data-value=".">.</button><button data-calc="equals" class="calc-operator calc-equals">=</button>
     </div>
   </div>
 </div>
@@ -20,28 +20,46 @@
 (()=>{const trigger=document.querySelector('.online');let taps=0,reset;trigger.addEventListener('click',e=>{e.preventDefault();taps++;clearTimeout(reset);reset=setTimeout(()=>taps=0,2500);if(taps>=5){taps=0;let note=document.getElementById('site-credit-easter-egg');if(!note){note=document.createElement('div');note.id='site-credit-easter-egg';note.textContent='CREATED BY PABLO RIERA';Object.assign(note.style,{position:'fixed',left:'50%',bottom:'24px',transform:'translateX(-50%)',padding:'12px 18px',background:'#202b42',color:'#fff',border:'1px solid #56647c',borderRadius:'12px',fontSize:'13px',zIndex:'9999',boxShadow:'0 8px 30px #0008',textAlign:'center'});document.body.appendChild(note)}note.hidden=false;clearTimeout(note.hideTimer);note.hideTimer=setTimeout(()=>note.hidden=true,4500)}})})();
 </script>
 <script>
-(()=> {
- const body=document.body, screen=document.getElementById('calculator-screen'), display=document.getElementById('calc-display'), back=document.getElementById('return-to-calc');
- let current='0', stored=null, operator=null, fresh=true;
- const paint=()=>{display.textContent=current;};
- const lock=()=>{body.classList.add('calc-locked');screen.hidden=false;current='0';stored=null;operator=null;fresh=true;paint();};
+(()=>{
+ const body=document.body,screen=document.getElementById('calculator-screen'),display=document.getElementById('calc-display'),expressionView=document.getElementById('calc-expression'),angleView=document.getElementById('calc-angle'),back=document.getElementById('return-to-calc');
+ let expression='',angle='DEG',justEvaluated=false;
+ const paint=()=>{expressionView.textContent=expression;display.textContent=expression||'0';};
+ const lock=()=>{body.classList.add('calc-locked');screen.hidden=false;expression='';justEvaluated=false;paint();};
  const unlock=()=>{body.classList.remove('calc-locked');screen.hidden=true;};
+ const factorial=n=>{if(n<0||n>170||!Number.isInteger(n))throw Error('Invalid factorial');let v=1;for(let i=2;i<=n;i++)v*=i;return v;};
+ function calculate(source){
+  const normalized=source.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-');
+  const tokens=normalized.match(/(?:\d+\.?\d*|\.\d+)|(?:[a-zA-Z]+|π)|[()+\-*/^!%]/g);
+  if(!tokens||tokens.join('')!==normalized.replace(/\s/g,''))throw Error('Invalid expression');
+  let i=0;const peek=()=>tokens[i],take=()=>tokens[i++],toRad=x=>angle==='DEG'?x*Math.PI/180:x;
+  function primary(){
+   const t=take();if(t===undefined)throw Error('Incomplete');
+   if(t==='('){const v=add();if(take()!==')')throw Error('Missing )');return v;}
+   if(/^\d/.test(t)||t[0]==='.')return Number(t);
+   if(t==='π')return Math.PI;if(t==='e')return Math.E;
+   if(/^[a-z]+$/i.test(t)){if(take()!=='(')throw Error('Function needs (');const x=add();if(take()!==')')throw Error('Missing )');
+    switch(t){case'sin':return Math.sin(toRad(x));case'cos':return Math.cos(toRad(x));case'tan':return Math.tan(toRad(x));case'ln':return Math.log(x);case'log':return Math.log10(x);case'sqrt':return Math.sqrt(x);case'abs':return Math.abs(x);case'asin':return angle==='DEG'?Math.asin(x)*180/Math.PI:Math.asin(x);case'acos':return angle==='DEG'?Math.acos(x)*180/Math.PI:Math.acos(x);case'atan':return angle==='DEG'?Math.atan(x)*180/Math.PI:Math.atan(x);default:throw Error('Unknown function');}
+   }throw Error('Unexpected token');
+  }
+  function postfix(){let v=primary();while(peek()==='!'||peek()==='%'){const op=take();v=op==='!'?factorial(v):v/100;}return v;}
+  function unary(){if(peek()==='+'){take();return unary();}if(peek()==='−'||peek()==='-'){take();return -unary();}return power();}
+  function power(){let v=postfix();if(peek()==='^'){take();v=Math.pow(v,unary());}return v;}
+  function mul(){let v=unary();while(peek()==='*'||peek()==='/'){const op=take(),b=unary();v=op==='*'?v*b:v/b;}return v;}
+  function add(){let v=mul();while(peek()==='+'||peek()==='-'){const op=take(),b=mul();v=op==='+'?v+b:v-b;}return v;}
+  const result=add();if(i!==tokens.length||!Number.isFinite(result))throw Error('Math error');return result;
+ }
+ const insert=v=>{if(justEvaluated&&!['+','−','×','÷','^','!','%'].includes(v))expression='';expression+=v;justEvaluated=false;paint();};
  document.querySelectorAll('[data-calc]').forEach(btn=>btn.addEventListener('click',()=>{
-   const action=btn.dataset.calc,value=btn.dataset.value;
-   if(action==='digit'){if(fresh||current==='0')current=value;else if(current.length<12)current+=value;fresh=false;}
-   else if(action==='decimal'){if(fresh){current='0.';fresh=false;}else if(!current.includes('.'))current+='.';}
-   else if(action==='clear'){current='0';stored=null;operator=null;fresh=true;}
-   else if(action==='sign'){if(current!=='0')current=String(-Number(current));}
-   else if(action==='percent')current=String(Number(current)/100);
-   else if(action==='operator'){stored=Number(current);operator=value;fresh=true;}
-   else if(action==='equals'){
-     if(current==='1234'&&stored===null&&!operator){unlock();return;}
-     if(stored!==null&&operator){const a=stored,b=Number(current);let result=operator==='+'?a+b:operator==='−'?a-b:operator==='×'?a*b:operator==='÷'?(b===0?0:a/b):b;current=String(Number.isFinite(result)?Number(result.toPrecision(10)):0);stored=null;operator=null;fresh=true;}
-   }
-   paint();
+  const a=btn.dataset.calc,v=btn.dataset.value;
+  if(a==='insert')insert(v);
+  else if(a==='function'){if(justEvaluated)expression='';expression+=v+'(';justEvaluated=false;paint();}
+  else if(a==='clear'){expression='';justEvaluated=false;paint();}
+  else if(a==='delete'){expression=expression.slice(0,-1);justEvaluated=false;paint();}
+  else if(a==='angle'){angle=angle==='DEG'?'RAD':'DEG';angleView.textContent=angle;btn.textContent=angle;}
+  else if(a==='equals'){try{const result=calculate(expression);if(expression.replace(/\s/g,'')==='1234'&&result===1234){unlock();return;}expression=Number(result.toPrecision(12)).toString();justEvaluated=true;paint();}catch(_){display.textContent='Error';justEvaluated=true;}}
  }));
  back.addEventListener('click',lock);
- document.addEventListener('keydown',e=>{if(!body.classList.contains('calc-locked'))return;if(/^\\d$/.test(e.key)){document.querySelector('[data-calc="digit"][data-value="'+e.key+'"]')?.click();}else if(e.key==='Enter'||e.key==='=')document.querySelector('[data-calc="equals"]')?.click();else if(e.key==='Escape')document.querySelector('[data-calc="clear"]')?.click();});
- screen.hidden=false;
+ document.addEventListener('keydown',e=>{if(!body.classList.contains('calc-locked'))return;if((e.key>='0'&&e.key<='9')||['.','+','-','*','/','(',')','^','!','%'].includes(e.key))insert(e.key);else if(e.key==='Enter'||e.key==='=')document.querySelector('[data-calc="equals"]').click();else if(e.key==='Backspace')document.querySelector('[data-calc="delete"]').click();else if(e.key==='Escape')document.querySelector('[data-calc="clear"]').click();});
+ screen.hidden=false;paint();
 })();
 </script></body></html>
