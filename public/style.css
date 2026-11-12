@@ -73,3 +73,18 @@ body.calc-locked>header,body.calc-locked>main{display:none!important}
 body:not(.calc-locked) #return-to-calc{display:flex}
 #return-to-calc:hover{background:#333;filter:none}
 @media(max-width:420px){.calculator-shell{padding:16px;border-radius:25px}.calc-keys{gap:8px}.calc-keys button{height:clamp(58px,16vw,70px)}#return-to-calc{right:12px;bottom:12px}}
+
+/* Scientific calculator layout */
+.scientific-shell{width:min(100%,500px);padding:18px 20px 20px;border-radius:26px}
+.calc-mode{display:flex;justify-content:space-between;padding:0 5px;color:#8f8f8f;font:10px 'DM Mono',monospace;letter-spacing:2px}
+#calc-angle{color:#f3a33b}
+.scientific-shell .calc-expression{height:18px;margin-top:13px;padding:0 5px;text-align:right;color:#858585;font:10px 'DM Mono',monospace;overflow:hidden}
+.scientific-shell .calc-display{height:66px;padding:4px 5px 12px;font-size:clamp(32px,8vw,48px)}
+.scientific-keys{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.scientific-keys button{height:clamp(43px,7.5vh,60px);min-width:0;border-radius:15px;font-size:clamp(14px,3.8vw,20px);letter-spacing:0}
+.scientific-keys .calc-function{background:#454545;color:#f1f1f1;font-size:clamp(12px,3.2vw,16px)}
+.scientific-keys .calc-operator{background:#f39b24;color:white}
+.scientific-keys .calc-zero{grid-column:span 2;border-radius:15px;text-align:center;padding:0}
+.scientific-keys .calc-equals{background:#f39b24}
+@media(max-height:740px){.scientific-shell{padding:12px 14px}.scientific-shell .calc-display{height:48px}.scientific-keys{gap:5px}.scientific-keys button{height:clamp(37px,6.5vh,48px)}.scientific-shell .calculator-brand{margin:2px 0 12px}}
+@media(max-width:380px){.scientific-shell{padding:12px}.scientific-keys{gap:5px}.scientific-keys button{border-radius:11px}.scientific-shell .calc-display{font-size:34px}}
