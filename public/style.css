@@ -88,3 +88,43 @@ body:not(.calc-locked) #return-to-calc{display:flex}
 .scientific-keys .calc-equals{background:#f39b24}
 @media(max-height:740px){.scientific-shell{padding:12px 14px}.scientific-shell .calc-display{height:48px}.scientific-keys{gap:5px}.scientific-keys button{height:clamp(37px,6.5vh,48px)}.scientific-shell .calculator-brand{margin:2px 0 12px}}
 @media(max-width:380px){.scientific-shell{padding:12px}.scientific-keys{gap:5px}.scientific-keys button{border-radius:11px}.scientific-shell .calc-display{font-size:34px}}
+
+
+/* iPad and short-viewport scientific calculator fit */
+.calculator-screen{
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding: max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+  -webkit-overflow-scrolling:touch;
+}
+.scientific-shell{
+  width:min(100%,500px);
+  max-height:calc(100vh - 20px);
+  max-height:calc(100dvh - 20px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding:clamp(10px,2.2vh,18px) clamp(12px,2.5vw,20px);
+}
+.scientific-shell .calculator-brand{margin:2px 0 clamp(8px,1.8vh,16px)}
+.scientific-shell .calc-expression{margin-top:clamp(5px,1vh,10px)}
+.scientific-shell .calc-display{height:clamp(38px,8vh,66px);padding:2px 5px 8px}
+.scientific-keys{gap:clamp(4px,0.8vh,8px)}
+.scientific-keys button{
+  height:clamp(34px,calc((100dvh - 285px)/7),58px);
+  min-height:34px;
+}
+@media(max-height:820px){
+  .scientific-shell{padding-top:10px;padding-bottom:10px}
+  .scientific-shell .calculator-brand{margin:0 0 7px}
+  .scientific-shell .calc-expression{height:14px;margin-top:4px}
+  .scientific-shell .calc-display{height:42px;padding-bottom:5px}
+  .scientific-keys{gap:4px}
+  .scientific-keys button{height:clamp(32px,calc((100dvh - 225px)/7),52px);min-height:32px}
+}
+@media(max-height:620px){
+  .calculator-screen{place-items:start center}
+  .scientific-shell{margin:auto}
+  .scientific-shell .calc-display{height:34px;font-size:30px}
+  .scientific-keys button{height:clamp(30px,calc((100dvh - 195px)/7),42px);min-height:30px}
+}
