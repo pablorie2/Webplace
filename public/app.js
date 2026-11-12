@@ -63,10 +63,10 @@ async function startDig3D(){if(dig3dLoading||dig3d||!$('digCanvas'))return;dig3d
 function digOreAt(x,y,z){const n=Math.abs(Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453)%1;return n>.994?'Diamond':n>.978?'Gold':n>.95?'Iron':n>.91?'Copper':n>.84?'Coal':'Dirt'}
 function buildDig3D(T,g){
  const canvas=$('digCanvas');if(!canvas)return;const mobile=matchMedia('(max-width:760px)').matches;
- const renderer=new T.WebGLRenderer({canvas,antialias:!mobile,alpha:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobile?.8:1.15));renderer.setSize(canvas.clientWidth||900,canvas.clientHeight||520,false);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
- const scene=new T.Scene();scene.background=new T.Color(0x9db5c0);scene.fog=new T.Fog(0x9db5c0,18,58);
+ const renderer=new T.WebGLRenderer({canvas,antialias:!mobile,alpha:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobile?.9:1.35));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.setSize(canvas.clientWidth||900,canvas.clientHeight||520,false);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;
+ const scene=new T.Scene();scene.background=new T.Color(0x9db5c0);scene.fog=new T.Fog(0x9db5c0,34,92);
  const camera=new T.PerspectiveCamera(74,(canvas.clientWidth||900)/(canvas.clientHeight||520),.08,100);camera.rotation.order='YXZ';
- scene.add(new T.HemisphereLight(0xcfe5ff,0x58412d,1.45));const sun=new T.DirectionalLight(0xffe3bd,2.15);sun.position.set(-12,24,9);scene.add(sun);
+ scene.add(new T.HemisphereLight(0xd9edff,0x59432e,1.75));const sun=new T.DirectionalLight(0xffedca,2.65);sun.position.set(-18,30,16);sun.castShadow=true;sun.shadow.mapSize.set(mobile?512:1024,mobile?512:1024);sun.shadow.camera.left=-24;sun.shadow.camera.right=24;sun.shadow.camera.top=24;sun.shadow.camera.bottom=-24;sun.shadow.bias=-.00025;scene.add(sun);
  const world=new T.Group();scene.add(world);const yard=new T.Group();scene.add(yard);
  const grassMat=new T.MeshStandardMaterial({color:0x66884a,roughness:1});function lawn(w,d,x,z){const m=new T.Mesh(new T.PlaneGeometry(w,d),grassMat);m.rotation.x=-Math.PI/2;m.position.set(x,.025,z);yard.add(m)}lawn(24.5,60,-17.75,0);lawn(24.5,60,17.75,0);lawn(11,24.5,0,-17.75);lawn(11,24.5,0,17.75);
  const soilSide=new T.MeshStandardMaterial({color:0x76543a,roughness:1});
@@ -81,6 +81,21 @@ function buildDig3D(T,g){
  const garageScreen=box(.85,.62,.08,new T.MeshStandardMaterial({color:0x182b32,emissive:0x234b4d,emissiveIntensity:.8}),-6.6,1.2,7);
  // Voxel strata: instanced blocks for mobile-friendly rendering.
  function noiseTex(base,colors){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');x.fillStyle=base;x.fillRect(0,0,128,128);for(let i=0;i<2600;i++){x.fillStyle=colors[i%colors.length];const w=1+Math.random()*4;x.fillRect(Math.random()*128,Math.random()*128,w,w)}const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=T.NearestFilter;t.colorSpace=T.SRGBColorSpace;return t}const dirtTex=noiseTex('#806044',['#6e4c34','#99724e','#765338','#a17a53']),grassTex=noiseTex('#66884a',['#52743c','#789d52','#456a37','#8aa65c']);grassMat.map=grassTex;grassMat.needsUpdate=true;const materials={Dirt:new T.MeshStandardMaterial({map:dirtTex,roughness:1}),Coal:new T.MeshStandardMaterial({color:0x34383b,roughness:.94}),Copper:new T.MeshStandardMaterial({color:0x9b5937,roughness:.8}),Iron:new T.MeshStandardMaterial({color:0x969a9b,metalness:.25,roughness:.7}),Gold:new T.MeshStandardMaterial({color:0xc69a37,metalness:.35,roughness:.45}),Diamond:new T.MeshStandardMaterial({color:0x42c9cb,metalness:.4,roughness:.22})};
+ // Detailed garden dressing: timber fencing, clipped hedges, trees and meadow grass.
+ const wood=new T.MeshStandardMaterial({color:0x9a7049,roughness:.92}),woodLight=new T.MeshStandardMaterial({color:0xb18a5c,roughness:.9}),bark=new T.MeshStandardMaterial({color:0x59402b,roughness:1});
+ for(let x=-12;x<=12;x+=.42){const plank=box(.34,1.85,.13,x%1.2<.5?wood:woodLight,x, .92,-12);plank.rotation.z=Math.sin(x*2)*.008}
+ for(const x of [-12,12])for(let z=-11.5;z<=13;z+=.42)box(.13,1.85,.34,wood,x,.92,z);
+ for(const z of [-12,13])for(const x of [-12,12])box(.22,2.1,.22,wood,x,1.05,z);
+ for(const z of [-11.8,13])box(24.2,.13,.16,woodLight,0,1.72,z);
+ const leafMats=[0x315b32,0x3f713b,0x578546,0x6b914d].map(color=>new T.MeshStandardMaterial({color,roughness:1}));
+ function tree(x,z,scale=1){const group=new T.Group();const trunk=new T.Mesh(new T.CylinderGeometry(.2*scale,.34*scale,2.8*scale,7),bark);trunk.position.y=1.4*scale;trunk.castShadow=true;group.add(trunk);for(let i=0;i<5;i++){const crown=new T.Mesh(new T.IcosahedronGeometry((1.15+(i%3)*.16)*scale,1),leafMats[i%leafMats.length]);crown.position.set(Math.sin(i*2.4)*.62*scale,(2.65+(i%3)*.48)*scale,Math.cos(i*2.4)*.5*scale);crown.castShadow=true;crown.receiveShadow=true;group.add(crown)}group.position.set(x,0,z);yard.add(group)}
+ [[-10,-9,1.35],[-5,-10,.95],[5,-10,1.1],[10,-8,1.4],[-11,2,1.2],[11,4,1.25],[-9,11,.9],[9,11,1.05]].forEach(v=>tree(...v));
+ const bushMats=[0x32663a,0x427743,0x54834a].map(color=>new T.MeshStandardMaterial({color,roughness:1}));
+ for(let x=-11;x<=11;x+=2.2){for(let z of [-10.9,11.7]){const b=new T.Mesh(new T.IcosahedronGeometry(.62,1),bushMats[Math.abs(Math.round(x))%3]);b.scale.set(1.25,.78,.9);b.position.set(x,.5,z);b.castShadow=true;yard.add(b)}}
+ const grassBladeGeo=new T.ConeGeometry(.035,.24,3),grassBladeMat=new T.MeshStandardMaterial({color:0x8aa75a,roughness:1,side:T.DoubleSide}),grassBatch=new T.InstancedMesh(grassBladeGeo,grassBladeMat,mobile?520:1150),grassDummy=new T.Object3D();let grassN=0;
+ for(let i=0;i<(mobile?520:1150);i++){const x=(Math.random()-.5)*23,z=(Math.random()-.5)*23;if(Math.abs(x)<6.2&&Math.abs(z)<6.2)continue;grassDummy.position.set(x,.12,z);grassDummy.rotation.y=Math.random()*Math.PI;const h=.55+Math.random()*.8;grassDummy.scale.set(.7,h,.7);grassDummy.updateMatrix();grassBatch.setMatrixAt(grassN,grassDummy.matrix);grassN++}
+ grassBatch.count=grassN;grassBatch.instanceMatrix.needsUpdate=true;yard.add(grassBatch);
+
  const voxelGeo=new T.BoxGeometry(.99,.99,.99),voxelMeshes={},voxelKeys={};
  const targetMaterial=new T.MeshBasicMaterial({colorWrite:false,depthWrite:false,transparent:true,opacity:0});
  let dugSet=new Set(g.dug||[]),terrainMesh=null;
