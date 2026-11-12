@@ -15,3 +15,36 @@
 .race-camera{position:absolute;right:18px;bottom:15px;color:#dce9ed;font-size:9px}
 .race-track-name{color:#e6f3f4!important}
 @media(max-width:600px){#raceCanvas{height:410px}.race-overlay{padding:12px}.race-camera{font-size:8px}.race-lap{font-size:9px;padding:8px}}
+
+/* Poker: face-down cards, readable suits, and seats around the felt */
+.poker-table{position:relative;min-height:490px;height:clamp(450px,52vw,560px);border:0;border-radius:0;background:transparent;box-shadow:none;margin:22px 0 18px;padding:0;overflow:visible}
+.poker-table:before{content:"";position:absolute;inset:12% 7%;border-radius:50%;background:radial-gradient(ellipse at 50% 42%,#197b54,#075039 72%,#043526);border:12px solid #69452d;box-shadow:inset 0 0 0 3px #d4a35d,0 16px 35px #0008;z-index:0}
+.poker-table>.table-title,.poker-table>.pot,.poker-table>.community,.poker-table>.seat-grid{position:absolute;z-index:1}
+.poker-table>.table-title{top:28%;left:0;right:0}
+.poker-table>.pot{top:35%;left:0;right:0;margin:0}
+.poker-table>.community{top:48%;left:0;right:0;margin:0;min-height:54px}
+.seat-grid{position:absolute;inset:0;display:block;pointer-events:none}
+.poker-seat{position:absolute;width:16%;min-width:92px;max-width:142px;min-height:82px;transform:translate(-50%,-50%);align-items:center;justify-content:center;background:linear-gradient(145deg,#18263a,#0a1423);border:1px solid #65748a;border-radius:13px;padding:7px 5px;box-shadow:0 8px 20px #0009;pointer-events:auto}
+.poker-seat b{font-size:11px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.poker-seat span{font-size:10px}
+.poker-seat .hole{min-height:38px;gap:4px}
+.seat-avatar{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#33455b;color:#e6edf5;font-size:13px}
+.poker-seat.folded-seat{opacity:.55;filter:grayscale(.8)}
+.playing-card,.card-back{width:34px;height:46px;flex:0 0 34px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;position:relative;box-shadow:0 2px 6px #0009;animation:pokerFlip .38s ease both;backface-visibility:hidden}
+.playing-card{background:#f8f8f4;color:#10151d;flex-direction:column;font-size:15px;line-height:1.05}
+.playing-card.red{color:#bd1827}
+.playing-card.black-suit{color:#080b10}
+.playing-card b{font-size:15px}
+.playing-card span{font-size:17px}
+.card-back{background:repeating-linear-gradient(45deg,#162b4b 0 4px,#243f67 4px 8px);border:2px solid #dce6f0;color:#f3f5f8}
+.card-back i{font:700 14px 'DM Mono',monospace;font-style:normal;border:1px solid #dce6f0;border-radius:50%;width:23px;height:23px;display:grid;place-items:center}
+@keyframes pokerFlip{0%{transform:rotateY(90deg) scale(.9)}100%{transform:rotateY(0) scale(1)}}
+.poker-actions #toggleCards{background:#e3c46b;color:#211a08}
+.poker-result{padding:12px 14px;background:#17243a;border:1px solid #52627a;border-radius:10px;color:#f5f7fc}
+@media(max-width:600px){.poker-table{min-height:450px;height:470px;margin-left:-8px;margin-right:-8px}.poker-table:before{inset:14% 3%;border-width:8px}.poker-seat{width:22%;min-width:0;max-width:108px;padding:6px 3px;min-height:76px}.poker-seat b{font-size:9px}.poker-seat span{font-size:9px}.playing-card,.card-back{width:29px;height:40px;flex-basis:29px}.poker-table>.table-title{top:30%}.poker-table>.pot{top:37%}.poker-table>.community{top:50%}}
+/* Chess legal move feedback and black-side perspective */
+.square{position:relative}
+.square.legal-move:after{content:"";position:absolute;width:25%;height:25%;border-radius:50%;background:#b7e66d;opacity:.9;pointer-events:none}
+.square.legal-capture{box-shadow:inset 0 0 0 4px #e0a34d}
+.square.legal-capture:after{content:"";position:absolute;inset:5%;border:3px solid #e0a34d;border-radius:50%;pointer-events:none}
+.square.selected{background:#b6cf62!important;outline:3px solid #e8f7a7;outline-offset:-3px}
