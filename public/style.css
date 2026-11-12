@@ -128,3 +128,56 @@ body:not(.calc-locked) #return-to-calc{display:flex}
   .scientific-shell .calc-display{height:34px;font-size:30px}
   .scientific-keys button{height:clamp(30px,calc((100dvh - 195px)/7),42px);min-height:30px}
 }
+
+
+/* Robust scientific calculator sizing: fixed seven-row grid inside a viewport-fitted shell */
+.calculator-screen{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:auto;
+  padding: max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+}
+.scientific-shell{
+  display:flex;
+  flex-direction:column;
+  width:min(100%,500px);
+  height:min(820px,calc(100dvh - 24px));
+  max-height:calc(100dvh - 24px);
+  min-height:0;
+  overflow:hidden;
+  flex:0 0 auto;
+  padding:clamp(10px,2dvh,18px) clamp(12px,2.5vw,20px);
+}
+.scientific-shell .calculator-brand{flex:0 0 auto;margin:2px 0 clamp(7px,1.5dvh,14px)}
+.scientific-shell .calc-mode{flex:0 0 auto}
+.scientific-shell .calc-expression{flex:0 0 14px;height:14px;margin-top:5px}
+.scientific-shell .calc-display{flex:0 0 clamp(38px,7dvh,62px);height:auto;min-height:0;padding:2px 5px 6px;font-size:clamp(30px,6vw,46px)}
+.scientific-keys{
+  flex:1 1 0;
+  min-height:0;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  grid-template-rows:repeat(7,minmax(0,1fr));
+  grid-auto-rows:minmax(0,1fr);
+  gap:clamp(4px,0.7dvh,8px);
+}
+.scientific-keys button{
+  height:auto;
+  min-height:0;
+  width:100%;
+  padding:0 2px;
+  align-self:stretch;
+  line-height:1;
+  font-size:clamp(13px,2.2dvh,20px);
+}
+.scientific-keys .calc-function{font-size:clamp(11px,1.9dvh,16px)}
+@media(max-height:700px){
+  .scientific-shell{padding-top:8px;padding-bottom:8px}
+  .scientific-shell .calculator-brand{margin:0 0 5px}
+  .scientific-shell .calc-expression{flex-basis:11px;height:11px;margin-top:2px}
+  .scientific-shell .calc-display{flex-basis:34px;font-size:29px}
+  .scientific-keys{gap:3px}
+}
+@media(max-width:420px){
+  .scientific-shell{width:100%;padding-left:10px;padding-right:10px}
+}
