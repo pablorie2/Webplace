@@ -48,3 +48,7 @@
 .square.legal-capture{box-shadow:inset 0 0 0 4px #e0a34d}
 .square.legal-capture:after{content:"";position:absolute;inset:5%;border:3px solid #e0a34d;border-radius:50%;pointer-events:none}
 .square.selected{background:#b6cf62!important;outline:3px solid #e8f7a7;outline-offset:-3px}
+
+.revive-panel{margin:16px auto;padding:14px 16px;max-width:420px;text-align:center;background:#241d32;border:1px solid #8b6ab8;border-radius:12px}
+.revive-panel p{margin:0 0 10px;color:#e7d9ff;font-weight:700}
+.revive-panel button{background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;font-weight:800;border:0;border-radius:9px;padding:12px 18px;cursor:pointer}
