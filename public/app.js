@@ -81,16 +81,37 @@ function buildDig3D(T,g){
  const garageScreen=box(.85,.62,.08,new T.MeshStandardMaterial({color:0x182b32,emissive:0x234b4d,emissiveIntensity:.8}),-6.6,1.2,7);
  // Voxel strata: instanced blocks for mobile-friendly rendering.
  function noiseTex(base,colors){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');x.fillStyle=base;x.fillRect(0,0,128,128);for(let i=0;i<2600;i++){x.fillStyle=colors[i%colors.length];const w=1+Math.random()*4;x.fillRect(Math.random()*128,Math.random()*128,w,w)}const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=T.NearestFilter;t.colorSpace=T.SRGBColorSpace;return t}const dirtTex=noiseTex('#806044',['#6e4c34','#99724e','#765338','#a17a53']),grassTex=noiseTex('#66884a',['#52743c','#789d52','#456a37','#8aa65c']);grassMat.map=grassTex;grassMat.needsUpdate=true;const materials={Dirt:new T.MeshStandardMaterial({map:dirtTex,roughness:1}),Coal:new T.MeshStandardMaterial({color:0x34383b,roughness:.94}),Copper:new T.MeshStandardMaterial({color:0x9b5937,roughness:.8}),Iron:new T.MeshStandardMaterial({color:0x969a9b,metalness:.25,roughness:.7}),Gold:new T.MeshStandardMaterial({color:0xc69a37,metalness:.35,roughness:.45}),Diamond:new T.MeshStandardMaterial({color:0x42c9cb,metalness:.4,roughness:.22})};
- const voxelGeo=new T.BoxGeometry(.99,.99,.99),oreGeo=new T.OctahedronGeometry(.18,0),voxelMeshes={},voxelKeys={};
- let dugSet=new Set(g.dug||[]);
+ const voxelGeo=new T.BoxGeometry(.99,.99,.99),voxelMeshes={},voxelKeys={};
+ const targetMaterial=new T.MeshBasicMaterial({colorWrite:false,depthWrite:false,transparent:true,opacity:0});
+ let dugSet=new Set(g.dug||[]),terrainMesh=null;
  function buildVoxels(state){
   dugSet=new Set(state.dug||[]);
   for(const m of Object.values(voxelMeshes)){world.remove(m);m.dispose?.()}
   for(const k of Object.keys(voxelMeshes))delete voxelMeshes[k];for(const k of Object.keys(voxelKeys))delete voxelKeys[k];
+  if(terrainMesh){world.remove(terrainMesh);terrainMesh.geometry.dispose();terrainMesh=null}
   const maxY=Math.min(60,Math.max(12,(state.depth||0)+10)),grouped={};for(const type of Object.keys(materials))grouped[type]=[];
+  const columnDepth=new Map();
+  for(let z=-5;z<=5;z++)for(let x=-5;x<=5;x++){let d=0;while(d<60&&dugSet.has(x+','+d+','+z))d++;columnDepth.set(x+','+z,d)}
+  const divisions=8,steps=11*divisions+1,verts=[],colors=[],indices=[];
+  const grassColor=new T.Color(0x73934d),soilColor=new T.Color(0x765039),deepColor=new T.Color(0x4a3025);
+  function smoothDepth(x,z){
+   const gx=Math.max(-5,Math.min(5,x)),gz=Math.max(-5,Math.min(5,z)),x0=Math.floor(gx),z0=Math.floor(gz),x1=Math.min(5,x0+1),z1=Math.min(5,z0+1),tx=gx-x0,tz=gz-z0;
+   const a=columnDepth.get(x0+','+z0)||0,b=columnDepth.get(x1+','+z0)||0,c=columnDepth.get(x0+','+z1)||0,d=columnDepth.get(x1+','+z1)||0;
+   const sx=tx*tx*(3-2*tx),sz=tz*tz*(3-2*tz);
+   return (a*(1-sx)+b*sx)*(1-sz)+(c*(1-sx)+d*sx)*sz;
+  }
+  for(let iz=0;iz<steps;iz++)for(let ix=0;ix<steps;ix++){
+   const x=-5.5+ix/divisions,z=-5.5+iz/divisions,depth=smoothDepth(x,z),edge=Math.max(Math.abs(x),Math.abs(z)),edgeBlend=Math.max(0,Math.min(1,(5.65-edge)*2)),y=-depth*edgeBlend;
+   verts.push(x,y,z);
+   const noise=Math.sin(x*19.7+z*13.1)*.018;
+   const col=depth<.04?grassColor.clone().lerp(soilColor,Math.max(0,Math.min(1,depth*2))).offsetHSL(0,0,noise):soilColor.clone().lerp(deepColor,Math.min(.8,depth/55)).offsetHSL(0,0,noise);
+   colors.push(col.r,col.g,col.b);
+   if(ix<steps-1&&iz<steps-1){const a=iz*steps+ix,b=a+1,c=a+steps,d=c+1;indices.push(a,c,b,b,c,d)}
+  }
+  const terrainGeo=new T.BufferGeometry();terrainGeo.setAttribute('position',new T.Float32BufferAttribute(verts,3));terrainGeo.setAttribute('color',new T.Float32BufferAttribute(colors,3));terrainGeo.setIndex(indices);terrainGeo.computeVertexNormals();
+  terrainMesh=new T.Mesh(terrainGeo,new T.MeshStandardMaterial({vertexColors:true,roughness:1,side:T.DoubleSide}));terrainMesh.receiveShadow=true;world.add(terrainMesh);
   for(let y=0;y<maxY;y++)for(let z=-5;z<=5;z++)for(let x=-5;x<=5;x++){const key=x+','+y+','+z;if(dugSet.has(key))continue;const type=digOreAt(x,y,z);grouped[type].push({x,y,z,key})}
-  const grassTops=[];for(let z=-5;z<=5;z++)for(let x=-5;x<=5;x++)if(!dugSet.has(x+',0,'+z))grassTops.push({x,z});if(grassTops.length){const topGeo=new T.BoxGeometry(.99,.035,.99),tops=new T.InstancedMesh(topGeo,grassMat,grassTops.length),d=new T.Object3D();grassTops.forEach((v,i)=>{d.position.set(v.x,.015,v.z);d.updateMatrix();tops.setMatrixAt(i,d.matrix)});tops.instanceMatrix.needsUpdate=true;tops.userData.keys=grassTops.map(v=>v.x+',0,'+v.z);world.add(tops);voxelMeshes.Grass=tops;}
-  for(const [type,items] of Object.entries(grouped)){if(!items.length)continue;const mesh=new T.InstancedMesh(voxelGeo,materials[type],items.length),dummy=new T.Object3D();items.forEach((v,i)=>{dummy.position.set(v.x,-v.y-.5,v.z);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix)});mesh.instanceMatrix.needsUpdate=true;mesh.userData.keys=items.map(v=>v.key);mesh.userData.type=type;mesh.userData.count=items.length;world.add(mesh);voxelMeshes[type]=mesh;voxelKeys[type]=mesh.userData.keys}
+  for(const [type,items] of Object.entries(grouped)){if(!items.length)continue;const mesh=new T.InstancedMesh(voxelGeo,targetMaterial,items.length),dummy=new T.Object3D();items.forEach((v,i)=>{dummy.position.set(v.x,-v.y-.5,v.z);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix)});mesh.instanceMatrix.needsUpdate=true;mesh.userData.keys=items.map(v=>v.key);mesh.userData.type=type;mesh.userData.count=items.length;world.add(mesh);voxelMeshes[type]=mesh;voxelKeys[type]=mesh.userData.keys}
  }
  buildVoxels(g);
  // Hole rim, gravel and a simple hand-held shovel model.
