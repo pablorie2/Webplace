@@ -96,13 +96,13 @@ function buildDig3D(T,g){
  for(let i=0;i<(mobile?520:1150);i++){const x=(Math.random()-.5)*23,z=(Math.random()-.5)*23;if(Math.abs(x)<6.2&&Math.abs(z)<6.2)continue;grassDummy.position.set(x,.12,z);grassDummy.rotation.y=Math.random()*Math.PI;const h=.55+Math.random()*.8;grassDummy.scale.set(.7,h,.7);grassDummy.updateMatrix();grassBatch.setMatrixAt(grassN,grassDummy.matrix);grassN++}
  grassBatch.count=grassN;grassBatch.instanceMatrix.needsUpdate=true;yard.add(grassBatch);
 
- const voxelGeo=new T.BoxGeometry(.99,.99,.99),voxelMeshes={},voxelKeys={};
+ const voxelGeo=new T.BoxGeometry(.99,.99,.99),oreGeo=new T.DodecahedronGeometry(.24,0),voxelMeshes={},voxelKeys={},oreMeshes={};
  const targetMaterial=new T.MeshBasicMaterial({colorWrite:false,depthWrite:false,transparent:true,opacity:0});
  let dugSet=new Set(g.dug||[]),terrainMesh=null;
  function buildVoxels(state){
   dugSet=new Set(state.dug||[]);
   for(const m of Object.values(voxelMeshes)){world.remove(m);m.dispose?.()}
-  for(const k of Object.keys(voxelMeshes))delete voxelMeshes[k];for(const k of Object.keys(voxelKeys))delete voxelKeys[k];
+  for(const k of Object.keys(voxelMeshes))delete voxelMeshes[k];for(const k of Object.keys(voxelKeys))delete voxelKeys[k];for(const m of Object.values(oreMeshes)){world.remove(m)}for(const k of Object.keys(oreMeshes))delete oreMeshes[k];
   if(terrainMesh){world.remove(terrainMesh);terrainMesh.geometry.dispose();terrainMesh=null}
   const maxY=Math.min(60,Math.max(12,(state.depth||0)+10)),grouped={};for(const type of Object.keys(materials))grouped[type]=[];
   const columnDepth=new Map();
@@ -127,6 +127,8 @@ function buildDig3D(T,g){
   terrainMesh=new T.Mesh(terrainGeo,new T.MeshStandardMaterial({vertexColors:true,roughness:1,side:T.DoubleSide}));terrainMesh.receiveShadow=true;world.add(terrainMesh);
   for(let y=0;y<maxY;y++)for(let z=-5;z<=5;z++)for(let x=-5;x<=5;x++){const key=x+','+y+','+z;if(dugSet.has(key))continue;const type=digOreAt(x,y,z);grouped[type].push({x,y,z,key})}
   for(const [type,items] of Object.entries(grouped)){if(!items.length)continue;const mesh=new T.InstancedMesh(voxelGeo,targetMaterial,items.length),dummy=new T.Object3D();items.forEach((v,i)=>{dummy.position.set(v.x,-v.y-.5,v.z);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix)});mesh.instanceMatrix.needsUpdate=true;mesh.userData.keys=items.map(v=>v.key);mesh.userData.type=type;mesh.userData.count=items.length;world.add(mesh);voxelMeshes[type]=mesh;voxelKeys[type]=mesh.userData.keys}
+  const oreLooks={Coal:[0x4a4e50,0x080a0c,.05],Copper:[0xb96a42,0x57210e,.08],Iron:[0xb0b8ba,0x273139,.05],Gold:[0xf2c64c,0x8a5b08,.28],Diamond:[0x61e7ee,0x087c91,.6]};
+  for(const [type,items] of Object.entries(grouped)){if(!oreLooks[type])continue;const exposed=items.filter(v=>[[v.x+1,v.y,v.z],[v.x-1,v.y,v.z],[v.x,v.y+1,v.z],[v.x,v.y-1,v.z],[v.x,v.y,v.z+1],[v.x,v.y,v.z-1]].some(p=>dugSet.has(p.join(','))));if(!exposed.length)continue;const look=oreLooks[type],mat=new T.MeshStandardMaterial({color:look[0],emissive:look[1],emissiveIntensity:look[2],metalness:type==='Iron'||type==='Gold'?.42:.12,roughness:type==='Diamond'?.2:.52});const mesh=new T.InstancedMesh(oreGeo,mat,exposed.length),dmy=new T.Object3D();exposed.forEach((v,i)=>{dmy.position.set(v.x,-v.y-.5,v.z);const scale=.72+((Math.abs(Math.sin(v.x*13+v.y*7+v.z*3))*100)%30)/100;dmy.scale.set(scale,scale*(type==='Diamond'?1.35:1),scale);dmy.rotation.set(v.x*.7,v.y*.5,v.z*.4);dmy.updateMatrix();mesh.setMatrixAt(i,dmy.matrix)});mesh.instanceMatrix.needsUpdate=true;mesh.castShadow=false;mesh.receiveShadow=true;world.add(mesh);oreMeshes[type]=mesh}
  }
  buildVoxels(g);
  // Hole rim, gravel and a simple hand-held shovel model.
