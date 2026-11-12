@@ -34,7 +34,7 @@ io.on('connection',s=>{
  s.on('chess:rematch',d=>{const r=rooms.get(d.id);if(!r||r.game!=='chess'||!r.over||!r.players.some(p=>p.id===s.id))return;r.colorSwap=!r.colorSwap;r.round++;r.over=false;r.chess={fen:new Chess().fen(),moves:[],status:'New round — White to move'};send(r);if(r.bots.length&&r.colorSwap)setTimeout(()=>chessAI(r),500)});
  s.on('poker:action',d=>{const r=rooms.get(d.id);if(!r||r.game!=='poker'||!r.players.some(p=>p.id===s.id))return;pokerAction(r,s.id,d.action,d.amount)});
  s.on('poker:next',d=>{const r=rooms.get(d.id);if(!r||r.game!=='poker'||!r.over||!r.players.some(p=>p.id===s.id))return;r.over=false;r.round++;startHand(r)});
- s.on('poker:revive',d=>{const r=rooms.get(d.id);if(!r||r.game!=='poker'||!r.players.some(p=>p.id===s.id))return;const p=r.poker;if((p.chips[s.id]??1000)>0)return;p.chips[s.id]=400;p.actions.push({name:r.players.find(x=>x.id===s.id)?.name||'Player',action:'revived',amount:400});send(r)});
+ s.on('poker:revive',d=>{const r=rooms.get(d.id);if(!r||r.game!=='poker'||r.players[0]?.id!==s.id)return;const p=r.poker,target=[...r.players,...r.bots].find(x=>x.id===d.targetId);if(!target||(p.chips[target.id]??1000)>0)return;p.chips[target.id]=400;p.actions.push({name:target.name,action:'revived by host',amount:400});send(r)});
  s.on('race:input',d=>{const r=rooms.get(d.id),p=r?.race.racers[s.id];if(!r||r.game!=='race'||!p||r.over)return;p.input={throttle:clamp(+d.throttle||0,0,1),steer:clamp(+d.steer||0,-1,1)}});
  s.on('race:track',d=>{const r=rooms.get(d.id);if(r?.game==='race'&&r.players[0]?.id===s.id){r.race.track=clamp(+d.track||0,0,tracks.length-1);send(r)}});
  s.on('race:next',d=>{const r=rooms.get(d.id);if(r?.game==='race'&&r.over&&r.players.some(p=>p.id===s.id)){r.round++;resetRace(r);send(r)}});
