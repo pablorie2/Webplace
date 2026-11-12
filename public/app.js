@@ -116,7 +116,7 @@ function buildDig3D(T,g){
    return (a*(1-sx)+b*sx)*(1-sz)+(c*(1-sx)+d*sx)*sz;
   }
   for(let iz=0;iz<steps;iz++)for(let ix=0;ix<steps;ix++){
-   const x=-5.5+ix/divisions,z=-5.5+iz/divisions,depth=smoothDepth(x,z),edge=Math.max(Math.abs(x),Math.abs(z)),edgeBlend=Math.max(0,Math.min(1,(5.65-edge)*2)),rough=(Math.sin(x*7.3+Math.cos(z*4.1))*Math.cos(z*8.2+x*2.7))*.045*Math.min(depth,1),y=-depth*edgeBlend+rough*edgeBlend;
+   const x=-5.5+ix/divisions,z=-5.5+iz/divisions,depth=smoothDepth(x,z),edge=Math.max(Math.abs(x),Math.abs(z)),edgeBlend=Math.max(0,Math.min(1,(5.5-edge)*2)),rough=(Math.sin(x*7.3+Math.cos(z*4.1))*Math.cos(z*8.2+x*2.7))*.045*Math.min(depth,1),y=-depth*edgeBlend+rough*edgeBlend;
    verts.push(x,y,z);
    const noise=Math.sin(x*19.7+z*13.1)*.018;
    const col=depth<.04?grassColor.clone().lerp(soilColor,Math.max(0,Math.min(1,depth*2))).offsetHSL(0,0,noise):soilColor.clone().lerp(deepColor,Math.min(.8,depth/55)).offsetHSL(0,0,noise);
