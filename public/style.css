@@ -76,3 +76,16 @@
 
 /* Let the excavation fill the play area instead of the small lobby card width. */
 .panel:has(.dig-world){max-width:1180px;width:100%;padding:20px;background:linear-gradient(145deg,#202a22,#151d19);border-color:#4c5947}
+
+/* Poker table: fixed seats around the felt, with the local player at the bottom. */
+.poker-table{position:relative;min-height:440px;padding:22px 12px 16px;overflow:hidden}
+.seat-grid{position:absolute;inset:0;display:block;pointer-events:none}
+.poker-seat{position:absolute;width:clamp(92px,17%,132px);min-width:0;padding:7px 5px;transform:translate(-50%,-50%);pointer-events:auto;background:#09281feF;z-index:2}
+.poker-seat .hole{min-height:36px;gap:3px}
+.poker-seat .playing-card{width:27px;height:37px;font-size:12px}
+.poker-seat.active-seat{z-index:3}
+.poker-seat:has(.revive-player){z-index:4}
+.poker-table>.table-title,.poker-table>.pot,.poker-table>.community{position:relative;z-index:1}
+.poker-table>.pot{margin:16px auto 6px}
+.poker-table>.community{margin:7px auto 12px;min-height:52px}
+@media(max-width:600px){.poker-table{min-height:410px;padding:18px 8px 12px;border-width:8px}.poker-seat{width:clamp(82px,27%,112px);font-size:10px;padding:6px 3px}.poker-seat .playing-card{width:23px;height:33px}.poker-seat span,.poker-seat i{font-size:9px}}
